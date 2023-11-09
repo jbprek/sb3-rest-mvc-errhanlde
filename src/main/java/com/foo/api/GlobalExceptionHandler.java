@@ -23,6 +23,8 @@ import java.util.List;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import org.springframework.lang.NonNull;
+import org.springframework.lang.Nullable;
 @Slf4j(topic = "GLOBAL_EXCEPTION_HANDLER")
 @RestControllerAdvice
 public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
@@ -32,7 +34,8 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     public ResponseEntity<Object> handleConstraintViolationException(ConstraintViolationException e, WebRequest request) {
         log.warn("ConstraintViolationException:", e);
 
-        Function<ConstraintViolation, CustomErrorResponse.ValidationError> constraintViolationMapper = v -> {
+        Function<ConstraintViolation, CustomErrorResponse.ValidationError> constraintViolationMapper;
+        constraintViolationMapper = v -> {
             var arr = v.getPropertyPath().toString().split("\\.");
             var node = arr.length == 0 ? "": arr[arr.length - 1];
             return new CustomErrorResponse.ValidationError(node, v.getMessage());
@@ -47,7 +50,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     @Override
     @ResponseStatus(HttpStatus.UNPROCESSABLE_ENTITY)
     protected ResponseEntity<Object> handleMethodArgumentNotValid(MethodArgumentNotValidException ex,
-                                                                  HttpHeaders headers,
+                                                                  @NonNull HttpHeaders headers,
                                                                   HttpStatusCode status,
                                                                   WebRequest request) {
 
