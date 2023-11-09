@@ -38,14 +38,6 @@ public class OfficeDao {
     }
 
 
-    public  OfficeDto query(Integer code, String city) {
-        var ent =  Optional.ofNullable( storage.get(code))
-                .orElseThrow(()->
-                        new OfficeDaoNotFoundException("Failed to find Office, code does not exists:"+code));
-        if ( !ent.code().equals(city))
-            throw new OfficeDaoNotFoundException("Failed to find Office, city does not exists:" + city);
-        return ent;
-    }
 
     public  List<OfficeDto> findAll() {
         return new ArrayList<>(storage.values());
