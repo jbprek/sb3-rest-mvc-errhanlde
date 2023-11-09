@@ -35,12 +35,7 @@ public class OfficeController {
         return dao.findByCode(Integer.valueOf(code));
     }
 
-    @GetMapping("/query")
-    public OfficeDto getByCity( @RequestParam @NotBlank @Positive String code, @RequestParam @NotBlank String city) {
-        return dao.query(Integer.valueOf(code),city);
-    }
-
-    @GetMapping("/all")
+      @GetMapping("/all")
     public List<OfficeDto> getAll() {
         return dao.findAll();
     }

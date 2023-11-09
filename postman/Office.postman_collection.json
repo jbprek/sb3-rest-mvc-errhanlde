@@ -182,12 +182,12 @@
 			"response": []
 		},
 		{
-			"name": "Get Not Found Copy",
+			"name": "Get URL Param Error",
 			"request": {
 				"method": "GET",
 				"header": [],
 				"url": {
-					"raw": "http://localhost:8080/offices/code/3",
+					"raw": "http://localhost:8080/offices/code/-45",
 					"protocol": "http",
 					"host": [
 						"localhost"
@@ -196,7 +196,28 @@
 					"path": [
 						"offices",
 						"code",
-						"3"
+						"-45"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Error Method not Supported",
+			"request": {
+				"method": "PUT",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8080/offices/code/-45",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"offices",
+						"code",
+						"-45"
 					]
 				}
 			},

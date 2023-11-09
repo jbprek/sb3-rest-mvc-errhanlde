@@ -1,6 +1,6 @@
 package com.foo.api;
 
-import com.foo.api.model.CustomErrorResponse;
+import com.foo.api.model.ErrorDto;
 import com.foo.service.OfficeDaoNotFoundException;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
@@ -24,21 +24,21 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.springframework.lang.NonNull;
-import org.springframework.lang.Nullable;
+
 @Slf4j(topic = "GLOBAL_EXCEPTION_HANDLER")
 @RestControllerAdvice
-public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
+public class OfficeControllerAdvice extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(ConstraintViolationException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ResponseEntity<Object> handleConstraintViolationException(ConstraintViolationException e, WebRequest request) {
         log.warn("ConstraintViolationException:", e);
 
-        Function<ConstraintViolation, CustomErrorResponse.ValidationError> constraintViolationMapper;
+        Function<ConstraintViolation, ErrorDto.ValidationError> constraintViolationMapper;
         constraintViolationMapper = v -> {
             var arr = v.getPropertyPath().toString().split("\\.");
             var node = arr.length == 0 ? "": arr[arr.length - 1];
-            return new CustomErrorResponse.ValidationError(node, v.getMessage());
+            return new ErrorDto.ValidationError(node, v.getMessage());
         };
         var validationErrors = e.getConstraintViolations().stream()
                 .map(constraintViolationMapper)
@@ -55,7 +55,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
                                                                   WebRequest request) {
 
         var fieldErrors = ex.getBindingResult().getFieldErrors().stream()
-                .map(v -> new CustomErrorResponse.ValidationError(v.getField(), v.getDefaultMessage()))
+                .map(v -> new ErrorDto.ValidationError(v.getField(), v.getDefaultMessage()))
                 .collect(Collectors.toList());
 
         return buildErrorResponse(HttpStatus.BAD_REQUEST, "Invalid payload", request, fieldErrors);
@@ -89,9 +89,9 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     private ResponseEntity<Object> buildErrorResponse(
             HttpStatusCode httpStatus, String message,
             WebRequest request,
-            List<CustomErrorResponse.ValidationError> errors) {
+            List<ErrorDto.ValidationError> errors) {
         var customErrorResponse =
-                new CustomErrorResponse(Instant.now(), httpStatus.value(), message, getPath(request),
+                new ErrorDto(Instant.now(), httpStatus.value(), message, getPath(request),
                         getMethod(request), errors);
 
         return ResponseEntity.status(httpStatus).body(customErrorResponse);
