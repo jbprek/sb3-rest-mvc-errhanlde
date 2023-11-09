@@ -1,9 +1,6 @@
 package com.foo.api.model;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-import lombok.Setter;
 
 import java.time.Instant;
 import java.util.List;

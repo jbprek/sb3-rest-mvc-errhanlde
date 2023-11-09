@@ -34,10 +34,9 @@ public class OfficeControllerAdvice extends ResponseEntityExceptionHandler {
     public ResponseEntity<Object> handleConstraintViolationException(ConstraintViolationException e, WebRequest request) {
         log.warn("ConstraintViolationException:", e);
 
-        Function<ConstraintViolation, ErrorDto.ValidationError> constraintViolationMapper;
-        constraintViolationMapper = v -> {
+        Function<ConstraintViolation, ErrorDto.ValidationError> constraintViolationMapper = v -> {
             var arr = v.getPropertyPath().toString().split("\\.");
-            var node = arr.length == 0 ? "": arr[arr.length - 1];
+            var node = arr.length == 0 ? "" : arr[arr.length - 1];
             return new ErrorDto.ValidationError(node, v.getMessage());
         };
         var validationErrors = e.getConstraintViolations().stream()
@@ -51,8 +50,8 @@ public class OfficeControllerAdvice extends ResponseEntityExceptionHandler {
     @ResponseStatus(HttpStatus.UNPROCESSABLE_ENTITY)
     protected ResponseEntity<Object> handleMethodArgumentNotValid(MethodArgumentNotValidException ex,
                                                                   @NonNull HttpHeaders headers,
-                                                                  HttpStatusCode status,
-                                                                  WebRequest request) {
+                                                                  @NonNull HttpStatusCode status,
+                                                                  @NonNull WebRequest request) {
 
         var fieldErrors = ex.getBindingResult().getFieldErrors().stream()
                 .map(v -> new ErrorDto.ValidationError(v.getField(), v.getDefaultMessage()))
@@ -77,11 +76,11 @@ public class OfficeControllerAdvice extends ResponseEntityExceptionHandler {
 
     @Override
     public ResponseEntity<Object> handleExceptionInternal(
-            Exception ex,
+            @NonNull Exception ex,
             Object body,
-            HttpHeaders headers,
-            HttpStatusCode status,
-            WebRequest request) {
+            @NonNull HttpHeaders headers,
+            @NonNull HttpStatusCode status,
+            @NonNull WebRequest request) {
 
         return buildErrorResponse(ex, status, request);
     }
