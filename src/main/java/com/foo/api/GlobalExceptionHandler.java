@@ -1,32 +1,48 @@
 package com.foo.api;
 
-import com.foo.api.model.ErrorResponse;
+import com.foo.api.model.CustomErrorResponse;
 import com.foo.service.OfficeDaoNotFoundException;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
-//import org.apache.commons.lang3.exception.ExceptionUtils;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
-import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.context.request.ServletWebRequest;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
-import java.util.Objects;
+import java.time.Instant;
+import java.util.Collections;
+import java.util.List;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Slf4j(topic = "GLOBAL_EXCEPTION_HANDLER")
 @RestControllerAdvice
 public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
-    public static final String TRACE = "trace";
+    @ExceptionHandler(ConstraintViolationException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ResponseEntity<Object> handleConstraintViolationException(ConstraintViolationException e, WebRequest request) {
+        log.warn("ConstraintViolationException:", e);
 
-    @Value("${reflectoring.trace:false}")
-    private boolean printStackTrace;
+        Function<ConstraintViolation, CustomErrorResponse.ValidationError> constraintViolationMapper = v -> {
+            var arr = v.getPropertyPath().toString().split("\\.");
+            var node = arr.length == 0 ? "": arr[arr.length - 1];
+            return new CustomErrorResponse.ValidationError(node, v.getMessage());
+        };
+        var validationErrors = e.getConstraintViolations().stream()
+                .map(constraintViolationMapper)
+                .collect(Collectors.toList());
+
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, "Invalid URL parameters", request, validationErrors);
+    }
 
     @Override
     @ResponseStatus(HttpStatus.UNPROCESSABLE_ENTITY)
@@ -34,14 +50,12 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
                                                                   HttpHeaders headers,
                                                                   HttpStatusCode status,
                                                                   WebRequest request) {
-        ErrorResponse errorResponse = new ErrorResponse(HttpStatus.UNPROCESSABLE_ENTITY.value(), "Validation error. Check 'errors' field for details.");
-        for (FieldError fieldError : ex.getBindingResult().getFieldErrors()) {
-            errorResponse.addValidationError(
-                    fieldError.getField(),
-                    fieldError.getDefaultMessage()
-            );
-        }
-        return ResponseEntity.unprocessableEntity().body(errorResponse);
+
+        var fieldErrors = ex.getBindingResult().getFieldErrors().stream()
+                .map(v -> new CustomErrorResponse.ValidationError(v.getField(), v.getDefaultMessage()))
+                .collect(Collectors.toList());
+
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, "Invalid payload", request, fieldErrors);
     }
 
     @ExceptionHandler(OfficeDaoNotFoundException.class)
@@ -53,24 +67,9 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-    public ResponseEntity<Object> handleAllUncaughtException(Exception exception, WebRequest request) {
-        log.error("Unknown error occurred", exception);
-        return buildErrorResponse(exception, "Unknown error occurred", HttpStatus.INTERNAL_SERVER_ERROR, request);
-    }
-
-    private ResponseEntity<Object> buildErrorResponse(Exception exception,
-                                                      HttpStatusCode httpStatus,
-                                                      WebRequest request) {
-        return buildErrorResponse(exception, exception.getMessage(), httpStatus, request);
-    }
-
-    private ResponseEntity<Object> buildErrorResponse(Exception exception,
-                                                      String message,
-                                                      HttpStatusCode httpStatus,
-                                                      WebRequest request) {
-        ErrorResponse errorResponse = new ErrorResponse(httpStatus.value(), message);
-
-        return ResponseEntity.status(httpStatus).body(errorResponse);
+    public ResponseEntity<Object> handleAllUncaughtException(Exception ex, WebRequest request) {
+        log.error("Unknown error occurred", ex);
+        return buildErrorResponse(ex, HttpStatus.INTERNAL_SERVER_ERROR, request);
     }
 
     @Override
@@ -82,5 +81,31 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
             WebRequest request) {
 
         return buildErrorResponse(ex, status, request);
+    }
+
+    private ResponseEntity<Object> buildErrorResponse(
+            HttpStatusCode httpStatus, String message,
+            WebRequest request,
+            List<CustomErrorResponse.ValidationError> errors) {
+        var customErrorResponse =
+                new CustomErrorResponse(Instant.now(), httpStatus.value(), message, getPath(request),
+                        getMethod(request), errors);
+
+        return ResponseEntity.status(httpStatus).body(customErrorResponse);
+    }
+
+    private ResponseEntity<Object> buildErrorResponse(Exception exception,
+                                                      HttpStatusCode httpStatus,
+                                                      WebRequest request) {
+        return buildErrorResponse(httpStatus, exception.getMessage(), request, Collections.emptyList());
+    }
+
+    private static String getPath(WebRequest request) {
+        var url = ((ServletWebRequest) request).getRequest().getRequestURI();
+        return url.substring(url.indexOf('/'));
+    }
+
+    private static String getMethod(WebRequest request) {
+        return ((ServletWebRequest) request).getHttpMethod().name();
     }
 }
