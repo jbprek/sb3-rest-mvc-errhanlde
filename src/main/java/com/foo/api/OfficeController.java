@@ -14,9 +14,7 @@ import java.util.List;
 
 @Validated
 @RestController
-@RequestMapping(value = "/offices", produces = MediaType.APPLICATION_JSON_VALUE
-//       , produces = MediaType.APPLICATION_JSON_VALUE
-)
+@RequestMapping(value = "/offices", produces = MediaType.APPLICATION_JSON_VALUE)
 @RequiredArgsConstructor
 public class OfficeController {
 
@@ -25,16 +23,16 @@ public class OfficeController {
 
 
     @PostMapping
-    public void create(@RequestBody @NotNull @Valid OfficeDto dto){
+    public void create(@RequestBody @NotNull @Valid OfficeDto dto) {
         dao.create(dto);
     }
 
     @GetMapping("/code/{code}")
-    public OfficeDto getByICode(@PathVariable @NotNull  @Positive String code) {
+    public OfficeDto getByICode(@PathVariable @NotNull @Positive String code) {
         return dao.findByCode(Integer.valueOf(code));
     }
 
-      @GetMapping("/all")
+    @GetMapping("/all")
     public List<OfficeDto> getAll() {
         return dao.findAll();
     }

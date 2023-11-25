@@ -27,7 +27,8 @@ import org.springframework.lang.NonNull;
 
 @Slf4j(topic = "GLOBAL_EXCEPTION_HANDLER")
 @RestControllerAdvice
-public class OfficeControllerAdvice extends ResponseEntityExceptionHandler {
+public class
+OfficeControllerAdvice extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(ConstraintViolationException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
