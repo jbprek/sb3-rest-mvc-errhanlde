@@ -1,7 +1,5 @@
-[
-  {
-    "code": 1,
-    "city": "Athens",
-    "country": "GR"
-  }
-]
+{
+  "code": 1,
+  "city": "Athens",
+  "country": "GR"
+}

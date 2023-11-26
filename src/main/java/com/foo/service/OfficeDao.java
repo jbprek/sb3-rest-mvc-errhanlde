@@ -31,8 +31,9 @@ public class OfficeDao {
         dtList.forEach(this::create);
     }
 
-    public synchronized OfficeDto findByCode(Integer code) {
-        return Optional.ofNullable( storage.get(code))
+    public  OfficeDto findByCode(Integer code) {
+        var val = storage.get(code);
+        return Optional.ofNullable(val)
                 .orElseThrow(()->
                         new OfficeDaoNotFoundException("Failed to find Office, code does not exists:"+code));
     }

@@ -1,0 +1,7 @@
+{
+  "time": "2023-11-25T16:12:28.382544Z",
+  "status": 404,
+  "message": "Failed to find Office, code does not exists:10",
+  "path": "/offices/code/10",
+  "method": "GET"
+}

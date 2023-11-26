@@ -18,9 +18,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class OfficeController {
 
-
     private final OfficeDao dao;
-
 
     @PostMapping
     public void create(@RequestBody @NotNull @Valid OfficeDto dto) {
@@ -28,8 +26,9 @@ public class OfficeController {
     }
 
     @GetMapping("/code/{code}")
-    public OfficeDto getByICode(@PathVariable @NotNull @Positive String code) {
-        return dao.findByCode(Integer.valueOf(code));
+    public OfficeDto getByCode(@PathVariable @NotNull @Positive Integer code) {
+        var value = dao.findByCode(Integer.valueOf(code));
+        return value;
     }
 
     @GetMapping("/all")

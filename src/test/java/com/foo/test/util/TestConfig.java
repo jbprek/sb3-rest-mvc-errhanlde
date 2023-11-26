@@ -1,4 +1,4 @@
-package com.foo;
+package com.foo.test.util;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.boot.test.context.TestConfiguration;

@@ -1,4 +1,4 @@
-package com.foo;
+package com.foo.test.util;
 
 
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -33,6 +33,13 @@ public class TestUtil {
     public <T> T unmarshall(String filePath, TypeReference<T> typeReference) throws IOException {
         var inputStream = new ClassPathResource(filePath).getInputStream();
         return jsonMapper.readValue(inputStream, typeReference);
+    }
+
+    /**
+     * Unmarshall a JSON string  into an object of type as specified by typeReference
+     */
+    public <T> T unmarshallJsonString(String json, TypeReference<T> typeReference) throws IOException {
+        return jsonMapper.readValue(json, typeReference);
     }
 
     /**
