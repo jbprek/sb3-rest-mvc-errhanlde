@@ -1,7 +1,7 @@
 # Spring +Boot 3 Error Handling
 
-Various Strategies in the following branches
+Various Strategies implemented in the following branches
 ## Branches
-- simple: Using default mechanism 
-- controller-advice-full : @RestControllerAdvice class extending ResponseEntityExceptionHandler with custom error-object
+1. simple: Using default mechanism 
+2. controller-advice-full : @RestControllerAdvice class extending ResponseEntityExceptionHandler using custom error-object
 

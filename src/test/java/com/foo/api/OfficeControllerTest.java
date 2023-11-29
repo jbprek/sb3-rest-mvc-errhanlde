@@ -3,6 +3,7 @@ package com.foo.api;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.foo.api.model.OfficeDto;
 import com.foo.service.OfficeDao;
+import com.foo.service.OfficeDaoCreateValidationException;
 import com.foo.service.OfficeDaoNotFoundException;
 import com.foo.test.util.TestConfig;
 import com.foo.test.util.TestUtil;
@@ -10,6 +11,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -23,10 +25,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.startsWith;
 import static org.hamcrest.core.Is.is;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.times;
-
+import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -59,8 +58,61 @@ class OfficeControllerTest {
 
         var payloadObject = testUtil.unmarshallJsonString(payloadJson, new TypeReference<OfficeDto>() {
         });
-        verify(dao,times(1)).create(dtoCaptor.capture());
+        verify(dao, times(1)).create(dtoCaptor.capture());
         assertThat(payloadObject).isEqualTo(dtoCaptor.getValue());
+    }
+
+    @Test
+    @DisplayName("Test POST /offices - Invalid Payload Validation Error")
+    void createValidationError() throws Exception {
+        var payloadJson = testUtil.getResourceAsString("com/foo/api/OfficeControllerTest/create/invalid-input.json");
+        mockMvc.perform(post("/offices").contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON)
+                        .content(payloadJson)
+                )
+
+                .andExpectAll(
+                        status().isBadRequest(),
+                        content().contentType(MediaType.APPLICATION_JSON),
+                        jsonPath("$.status", is(400)),
+                        jsonPath("$.message", is("Invalid payload")),
+                        jsonPath("$.path", is("/offices")),
+                        jsonPath("$.method", is("POST")),
+                        jsonPath("$.errors[0].field", is("country")),
+                        jsonPath("$.errors[0].message", is("must not be blank")),
+                        jsonPath("$.errors[1].field", is("code")),
+                        jsonPath("$.errors[1].message", is("must be greater than 0"))
+                );
+    }
+
+    @Test
+    @DisplayName("Test POST /offices - Duplicate code server Error ")
+    void createDuplicateCodeError() throws Exception {
+        //  Note Mockito use on void method
+        Mockito.doThrow(new OfficeDaoCreateValidationException("Failed to create Office, code already exists:"))
+                .when(dao).create(any(OfficeDto.class));
+
+        var payload = """
+                {
+                    "code": 1,
+                    "city": "Athens",
+                    "country": "GRE"
+                }
+                """;
+        mockMvc.perform(post("/offices").contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON)
+                        .content(payload)
+                )
+                .andExpectAll(
+                        status().isInternalServerError(),
+                        content().contentType(MediaType.APPLICATION_JSON),
+                        jsonPath("$.status", is(500)),
+                        jsonPath("$.message", startsWith("Failed to create Office, code already exists:")),
+                        jsonPath("$.path", is("/offices")),
+                        jsonPath("$.method", is("POST"))
+                );
+
+        verify(dao, times(1)).create(any());
     }
 
 
@@ -68,10 +120,10 @@ class OfficeControllerTest {
     @DisplayName("Test  GET /offices/code/{code} - happy path")
     void getByICode() throws Exception {
         var expectedObject = testUtil.unmarshall("com/foo/api/OfficeControllerTest/common/test-input.json", new TypeReference<OfficeDto>() {
-                });
+        });
         when(dao.findByCode(any())).thenReturn(expectedObject);
 
-        var mvcResult = mockMvc.perform(get("/offices/code/{code}",1L )
+        var mvcResult = mockMvc.perform(get("/offices/code/{code}", 1L)
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andReturn();
@@ -82,8 +134,8 @@ class OfficeControllerTest {
 
         // Verify Invocation to Service Layer
         ArgumentCaptor<Integer> idCaptor = ArgumentCaptor.forClass(Integer.class);
-        verify(dao,times(1)).findByCode(idCaptor.capture());
-        assertThat(1L).isEqualTo(idCaptor.getValue());
+        verify(dao, times(1)).findByCode(idCaptor.capture());
+        assertThat(idCaptor.getValue()).isEqualTo(1);
     }
 
     @Test
@@ -92,34 +144,34 @@ class OfficeControllerTest {
 
         when(dao.findByCode(any())).thenThrow(new OfficeDaoNotFoundException("Failed to find Office, code does not exists:10"));
 
-        mockMvc.perform(get("/offices/code/{code}",10L )
+        mockMvc.perform(get("/offices/code/{code}", 10L)
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpectAll(
                         status().isNotFound(),
                         content().contentType(MediaType.APPLICATION_JSON),
-                        jsonPath("$.status", is(Integer.valueOf(404))),
+                        jsonPath("$.status", is(404)),
                         jsonPath("$.message", is("Failed to find Office, code does not exists:10")),
                         jsonPath("$.path", is("/offices/code/10")),
                         jsonPath("$.path", startsWith("/offices/code/10")),
                         jsonPath("$.method", is("GET"))
-                        );
+                );
 
         // Verify Invocation to Service Layer
         ArgumentCaptor<Integer> idCaptor = ArgumentCaptor.forClass(Integer.class);
-        verify(dao,times(1)).findByCode(idCaptor.capture());
-        assertThat(10L).isEqualTo(idCaptor.getValue());
+        verify(dao, times(1)).findByCode(idCaptor.capture());
+        assertThat(idCaptor.getValue()).isEqualTo(10);
     }
 
     @Test
     @DisplayName("Test  GET /offices/code/{code} -Invalid Parameter Error")
     void getByICodeInvalidParameterError() throws Exception {
 
-        mockMvc.perform(get("/offices/code/{code}",-20L )
+        mockMvc.perform(get("/offices/code/{code}", -20L)
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpectAll(
                         status().isBadRequest(),
                         content().contentType(MediaType.APPLICATION_JSON),
-                        jsonPath("$.status", is(Integer.valueOf(400))),
+                        jsonPath("$.status", is(400)),
                         jsonPath("$.message", is("Invalid URL parameters")),
                         jsonPath("$.path", startsWith("/offices/code/")),
                         jsonPath("$.method", is("GET")),
@@ -128,26 +180,26 @@ class OfficeControllerTest {
                 );
 
         // Verify NO Invocation to Service Layer
-        verify(dao,times(0)).findByCode(any());
+        verify(dao, times(0)).findByCode(any());
     }
 
     @Test
     @DisplayName("Test  GET /offices/code/{code} -Invalid Type of Parameter Error")
     void getByICodeInvalidParameterTypeError() throws Exception {
 
-        mockMvc.perform(get("/offices/code/{code}","unexpected")
+        mockMvc.perform(get("/offices/code/{code}", "unexpected")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpectAll(
                         status().isBadRequest(),
                         content().contentType(MediaType.APPLICATION_JSON),
-                        jsonPath("$.status", is(Integer.valueOf(400))),
+                        jsonPath("$.status", is(400)),
                         jsonPath("$.message", startsWith("Failed to convert value of type 'java.lang.String' to required type 'java.lang.Integer'")),
                         jsonPath("$.path", startsWith("/offices/code/")),
                         jsonPath("$.method", is("GET"))
                 );
 
         // Verify NO Invocation to Service Layer
-        verify(dao,times(0)).findByCode(any());
+        verify(dao, times(0)).findByCode(any());
     }
 
     @Test
@@ -180,14 +232,13 @@ class OfficeControllerTest {
                 .andExpectAll(
                         status().isMethodNotAllowed(),
                         content().contentType(MediaType.APPLICATION_JSON),
-                        jsonPath("$.status", is(Integer.valueOf(405))),
+                        jsonPath("$.status", is(405)),
                         jsonPath("$.message", is("Request method 'PUT' is not supported")),
                         jsonPath("$.path", is("/offices")),
                         jsonPath("$.method", is("PUT"))
                 );
 
     }
-
 
 
 }
